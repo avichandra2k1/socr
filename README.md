@@ -90,12 +90,18 @@ Add this to your `~/.hammerspoon/init.lua`:
 
 ```lua
 -- Cmd+Shift+2: screenshot OCR to clipboard
-hs.hotkey.bind({ "cmd", "shift" }, "2", function()
-  hs.execute("/opt/homebrew/bin/socr -x -c -l en-US")
+hs.hotkey.bind({ "cmd", "shift" }, "2", nil, function()
+  -- Wait for the shortcut keys to be released, otherwise the selection
+  -- crosshair ignores the first drag while Cmd and Shift are still held.
+  hs.timer.doAfter(0.1, function()
+    hs.execute("/opt/homebrew/bin/socr -x -c -l en-US")
+  end)
 end)
 ```
 
 Adjust the language and keybinding to your preference. `-x` suppresses the screenshot sound and `-c` puts the text on the clipboard.
+
+The small delay matters. If you call `socr` directly from the hotkey handler, the screenshot UI comes up while the modifier keys are still down and your first drag does nothing. 0.1 seconds is enough on most setups. If the first drag still gets swallowed, bump it up a little.
 
 ## Credits
 
