@@ -12,8 +12,12 @@ Usage: socr [options] [image]
 Capture a screen region (or read an image file), OCR it with Apple Vision,
 and print the recognized text to stdout. Press Escape to cancel the capture.
 
+Commands:
+  languages            List the language codes Vision supports
+
 Options:
   -l, --lang <langs>   Recognition language(s), joined with '+' (default: en-US)
+                       Vision does not auto-detect. See: socr languages
   -x, --silent         Do not play the screenshot sound
   -c, --clipboard      Also copy the recognized text to the clipboard
       --fast           Use the fast recognition level (less accurate)
