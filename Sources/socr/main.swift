@@ -6,11 +6,11 @@ import Vision
 let version = "0.1.0"
 
 let usage = """
-Usage: socr [options]
+Usage: socr [options] [image]
        socr languages
 
-Capture a screen region, OCR it with Apple Vision, and print the recognized
-text to stdout. Press Escape to cancel the capture.
+Capture a screen region (or read an image file), OCR it with Apple Vision,
+and print the recognized text to stdout. Press Escape to cancel the capture.
 
 Options:
   -l, --lang <langs>   Recognition language(s), joined with '+' (default: en-US)
@@ -26,6 +26,7 @@ struct Options {
     var silent = false
     var clipboard = false
     var fast = false
+    var image: String?
     var listLanguages = false
 }
 
@@ -54,8 +55,12 @@ func parse(_ argv: [String]) -> Options {
         default:
             if a.hasPrefix("--lang=") {
                 o.languages = a.dropFirst(7).split(separator: "+").map(String.init)
-            } else {
+            } else if a.hasPrefix("-"), a.count > 1 {
                 fail("unknown option \(a)\n\(usage)")
+            } else if o.image == nil {
+                o.image = a
+            } else {
+                fail("unexpected argument \(a)")
             }
         }
     }
@@ -106,8 +111,16 @@ func run() -> Int32 {
         return 0
     }
 
-    guard let path = capture(silent: opts.silent) else { return 0 }
-    defer { try? FileManager.default.removeItem(atPath: path) }
+    let path: String
+    var isTemp = false
+    if let image = opts.image {
+        path = image
+    } else {
+        guard let captured = capture(silent: opts.silent) else { return 0 }
+        path = captured
+        isTemp = true
+    }
+    defer { if isTemp { try? FileManager.default.removeItem(atPath: path) } }
 
     guard let image = loadImage(path) else { fail("could not read image at \(path)") }
     let text: String
