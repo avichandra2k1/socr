@@ -6,6 +6,7 @@ let version = "0.1.0"
 
 let usage = """
 Usage: socr [options]
+       socr languages
 
 Capture a screen region, OCR it with Apple Vision, and print the recognized
 text to stdout. Press Escape to cancel the capture.
@@ -20,6 +21,7 @@ Options:
 struct Options {
     var languages = ["en-US"]
     var silent = false
+    var listLanguages = false
 }
 
 func fail(_ message: String, code: Int32 = 1) -> Never {
@@ -41,6 +43,7 @@ func parse(_ argv: [String]) -> Options {
             guard i < argv.count else { fail("\(a) requires a value") }
             o.languages = argv[i].split(separator: "+").map(String.init)
             i += 1
+        case "languages": o.listLanguages = true
         default:
             if a.hasPrefix("--lang=") {
                 o.languages = a.dropFirst(7).split(separator: "+").map(String.init)
@@ -87,6 +90,14 @@ func recognize(_ image: CGImage, languages: [String]) throws -> String {
 
 func run() -> Int32 {
     let opts = parse(Array(CommandLine.arguments.dropFirst()))
+
+    if opts.listLanguages {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        guard let langs = try? request.supportedRecognitionLanguages() else { fail("failed to query supported languages") }
+        print(langs.joined(separator: "\n"))
+        return 0
+    }
 
     guard let path = capture(silent: opts.silent) else { return 0 }
     defer { try? FileManager.default.removeItem(atPath: path) }
