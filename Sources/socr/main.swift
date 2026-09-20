@@ -93,6 +93,10 @@ func recognize(_ image: CGImage, languages: [String], fast: Bool) throws -> Stri
     let request = VNRecognizeTextRequest()
     request.recognitionLevel = fast ? .fast : .accurate
     request.usesLanguageCorrection = true
+    let supported = try request.supportedRecognitionLanguages()
+    if let bad = languages.first(where: { !supported.contains($0) }) {
+        fail("unsupported language \(bad) (see: socr languages)")
+    }
     request.recognitionLanguages = languages
     try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
     return (request.results ?? [])
