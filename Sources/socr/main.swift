@@ -1,4 +1,5 @@
 // socr — capture a screen region, OCR it with Apple Vision, print text to stdout.
+import AppKit
 import Foundation
 import Vision
 
@@ -14,6 +15,8 @@ text to stdout. Press Escape to cancel the capture.
 Options:
   -l, --lang <langs>   Recognition language(s), joined with '+' (default: en-US)
   -x, --silent         Do not play the screenshot sound
+  -c, --clipboard      Also copy the recognized text to the clipboard
+      --fast           Use the fast recognition level (less accurate)
   -v, --version        Print version and exit
   -h, --help           Print this help and exit
 """
@@ -21,6 +24,8 @@ Options:
 struct Options {
     var languages = ["en-US"]
     var silent = false
+    var clipboard = false
+    var fast = false
     var listLanguages = false
 }
 
@@ -39,6 +44,8 @@ func parse(_ argv: [String]) -> Options {
         case "-h", "--help": print(usage); exit(0)
         case "-v", "--version": print(version); exit(0)
         case "-x", "--silent": o.silent = true
+        case "-c", "--clipboard": o.clipboard = true
+        case "--fast": o.fast = true
         case "-l", "--lang":
             guard i < argv.count else { fail("\(a) requires a value") }
             o.languages = argv[i].split(separator: "+").map(String.init)
@@ -77,9 +84,9 @@ func loadImage(_ path: String) -> CGImage? {
     return CGImageSourceCreateImageAtIndex(source, 0, nil)
 }
 
-func recognize(_ image: CGImage, languages: [String]) throws -> String {
+func recognize(_ image: CGImage, languages: [String], fast: Bool) throws -> String {
     let request = VNRecognizeTextRequest()
-    request.recognitionLevel = .accurate
+    request.recognitionLevel = fast ? .fast : .accurate
     request.usesLanguageCorrection = true
     request.recognitionLanguages = languages
     try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
@@ -93,7 +100,7 @@ func run() -> Int32 {
 
     if opts.listLanguages {
         let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .accurate
+        request.recognitionLevel = opts.fast ? .fast : .accurate
         guard let langs = try? request.supportedRecognitionLanguages() else { fail("failed to query supported languages") }
         print(langs.joined(separator: "\n"))
         return 0
@@ -104,10 +111,15 @@ func run() -> Int32 {
 
     guard let image = loadImage(path) else { fail("could not read image at \(path)") }
     let text: String
-    do { text = try recognize(image, languages: opts.languages) }
+    do { text = try recognize(image, languages: opts.languages, fast: opts.fast) }
     catch { fail("recognition failed: \(error.localizedDescription)") }
 
     if text.isEmpty { return 0 }
+    if opts.clipboard {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(text, forType: .string)
+    }
     print(text)
     return 0
 }
