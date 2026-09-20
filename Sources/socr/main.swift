@@ -3,7 +3,7 @@ import AppKit
 import Foundation
 import Vision
 
-let version = "0.1.0"
+let version = "0.1.1"
 
 let usage = """
 Usage: socr [options] [image]
